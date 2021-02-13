@@ -25,8 +25,7 @@ Code was managed with Visual Studio Code, encountered following issues:
 
 Contributors names and contact info
 
-ex. Krištof Špenko  
-ex. [@Kspenko](https://twitter.com/Kspenko)
+ex. Krištof Špenko [@Kspenko](https://twitter.com/Kspenko)
 
 ## License
 
