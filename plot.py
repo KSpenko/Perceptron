@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-nMinibatch = 500
+nMinibatch = 2000
 
-name = "keras_cnn_adam"
+name = "keras_perceptron_adam"
 
 data1 = np.transpose(np.loadtxt("models/"+name+"/batch-history.dat",skiprows=1))
 data2 = np.transpose(np.loadtxt("models/"+name+"/epoch-history.dat",skiprows=1))
@@ -14,8 +14,8 @@ axs[0][0].plot(data1[0], data1[1], color="cyan")
 axs[0][0].plot(data2[0], data2[1])
 axs[0][0].plot(data2[0], data2[3])
 axs[0][0].legend(('batch_log', 'train_data','test_data'))
-axs[0][0].vlines(np.argmin(data2[1])*nMinibatch, 0, 1, color='blue', linestyle='--')
-axs[0][0].vlines(np.argmin(data2[3])*nMinibatch, 0, 1, color='orange', linestyle='--')
+axs[0][0].vlines(np.argmin(data2[1])*nMinibatch, 0, np.amax(data1[1]), color='blue', linestyle='--')
+axs[0][0].vlines(np.argmin(data2[3])*nMinibatch, 0, np.amax(data1[1]), color='orange', linestyle='--')
 axs[0][0].set_xlabel('#Epoch')
 axs[0][0].set_ylabel('Cost')
 
@@ -23,8 +23,8 @@ axs[0][1].loglog(data1[0], data1[1], color="cyan")
 axs[0][1].loglog(data2[0], data2[1])
 axs[0][1].loglog(data2[0], data2[3])
 axs[0][1].legend(('batch_log', 'train_data','test_data'))
-axs[0][1].vlines(np.argmin(data2[1])*nMinibatch, 0, 1, color='blue', linestyle='--')
-axs[0][1].vlines(np.argmin(data2[3])*nMinibatch, 0, 1, color='orange', linestyle='--')
+axs[0][1].vlines(np.argmin(data2[1])*nMinibatch, 0, np.amax(data1[1]), color='blue', linestyle='--')
+axs[0][1].vlines(np.argmin(data2[3])*nMinibatch, 0, np.amax(data1[1]), color='orange', linestyle='--')
 axs[0][1].set_xlabel('log(#Epoch)')
 axs[0][1].set_ylabel('log(Cost)')
 

@@ -16,8 +16,8 @@ num_classes = 10
 layout = [784, 250, 10]
 act_func = "tanh" #"sigmoid"
 
-nMinibatch = 500
-minibatchSize = 120
+nMinibatch = 2000
+minibatchSize = 30
 nEpoch = 10
 eta = 0.01
 
@@ -42,12 +42,13 @@ teh length of the list indicatets the number of layers; first layer is the input
 		self.biases = []		
 		self.nLayers = len(network_layout)
 		self.layout = network_layout
+		self.function = function
 		self.func = np.tanh
-		if(function=="sigmoid"): self.function = sigmoid
+		if(function=="sigmoid"): self.func = sigmoid
 		# weight initializer (normalized random Gaussian)
 		for i in range(1, self.nLayers):	
 			self.biases.append( np.zeros(self.layout[i]) )
-			self.weights.append( np.random.normal(loc=0.0, scale=(1./np.sqrt(self.layout[i]*self.layout[i-1])), size=(self.layout[i], self.layout[i-1]) ) )
+			self.weights.append( np.random.normal(loc=0.0, scale=np.sqrt(2./(self.layout[i]+self.layout[i-1])), size=(self.layout[i], self.layout[i-1]) ) )
 
 	def feedforward(self, input_data, output_data, data_size):
 		""" fo the give input we calculate the activations at the nodes in each layer
@@ -155,25 +156,55 @@ eta - learning parameter (how "fast" does the model learn),
 		plt.savefig(folder+'/incorrects.png')
 		plt.show()
 
+	def deep_dream(self, number, nEpoch, eta=0.001):
+		""" Script to calculate deep dream image of a specific output. 
+	Unlike in the Keras implementation we do not add an additional layer but optimize the activations of the input layer. """
+		if(act_func=="sigmoid"):
+			x_dd = np.array([np.zeros(img_rows*img_cols)])
+			y_dd = to_categorical([number], num_classes)
+		elif(act_func=="tanh"):
+			x_dd = np.array([np.zeros(img_rows*img_cols)-1.])
+			y_dd = to_categorical([number], num_classes)*2.-1.
+		
+		for j in range(nEpoch):
+			activations = self.feedforward(x_dd, y_dd, 1)[0]
+			if(self.function == "tanh"):
+				derivative = 1.-np.power(activations[-1], 2.)	# (d/dx)(tanh(x)) = 1 - (tanh(x))^2
+			elif(self.function == "sigmoid"):
+				derivative = np.multiply(activations[-1],1-activations[-1])	# (d/dx)(sigmoid(x)) = sigmoid(x)*(1-sigmoid(x))
+			residual = np.multiply(-2.*(y_dd-activations[-1]), derivative)
+			for i in range(self.nLayers-2, 0, -1):
+				residual = np.multiply( np.einsum("kj,ik->ij", self.weights[i], residual), 1.-np.power(activations[i], 2.))
+			x_dd[0] -= (eta)*np.sum(np.einsum("ik,kj->ij", residual, self.weights[0]), axis=0)
+			if(act_func=="sigmoid"):
+				x_dd = np.clip(x_dd, 0., 1.)
+			elif(act_func=="tanh"):
+				x_dd = np.clip(x_dd, -1., 1.)
+		
+		score = self.evaluate(x_dd, y_dd, 1)
+		return x_dd[0], score
+
 #================================================================================================
 if __name__ == '__main__':
 	""" Usage:
 1. training the model without saving, to estimate were the over-training begins (minimum of cost on validation): switch=True, save=False, logging=True, test=False
 2. training the model and saving weights, with an "ideal" number of epochs: switch=True, save=True, logging=False, test=False
-3. testing the "ideal" model: switch=False, save=False, logging=False, test=True."""
+3. testing the "ideal" model: switch=False, save=False, logging=False, test=True
+4. for testing the deep dream feature: dd = True."""
 
-	nEpoch = 1000
+	nEpoch = 200
 	name = 'perceptron'
 	folder = 'models/'+name
 	
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
-	switch = True
-	save = True
+	switch = False
+	save = False
 	global logging
-	logging = True
-	test = True
+	logging = False
+	test = False
+	dd = True
 
 	if(switch):
 		global f 
@@ -191,3 +222,19 @@ if __name__ == '__main__':
 	if(test):
 		model = save_load.load_xlsx(file_name=(folder+'/model.xlsx'), layout=layout)
 		model.test(x_test, y_test, 10000, (4, 6), folder)
+
+	if(dd):
+		model = save_load.load_xlsx(file_name=(folder+'/model.xlsx'), layout=layout)
+		fig, ax = plt.subplots(2, 5)
+		fig.set_size_inches(15, 6)
+		for i in range(num_classes):
+			img, score = model.deep_dream(i, 200*nMinibatch, eta=0.001)
+			#print(img)
+			print(i)
+			print(score)
+			print(np.amax(img))
+			print(np.amin(img))
+			im = ax[int(i/5)][int(i%5)].imshow(np.reshape(img, newshape=(img_rows, img_cols)), cmap='Greys')
+			ax[int(i/5)][int(i%5)].set_title(str(i))
+		plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.9, wspace=0.5, hspace=0.5)
+		plt.savefig(folder+'/deepdream.png')
